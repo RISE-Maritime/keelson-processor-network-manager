@@ -65,6 +65,28 @@ def terminal_inputs():
         help="Specify the common key expression to each platform {realm}/v{major_version}/{entity_id}",
     )
 
+    parser.add_argument(
+        "--start-mb",
+        type=float,
+        default=0.0,
+        help="Start the stress test with this amount of MB",
+    )
+
+    parser.add_argument(
+        "--end-mb",
+        type=float,
+        default=10.0,
+        help="End the stress test with this amount of MB",
+    )
+
+    parser.add_argument(
+        "--step-mb",
+        type=float,
+        default=1.0,
+        help="Increment the stress test by this amount of MB",
+    )
+
+
     ## Parse arguments and start doing our thing
     args = parser.parse_args()
 

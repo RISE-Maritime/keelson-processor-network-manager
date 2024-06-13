@@ -56,14 +56,16 @@ def query_ping_upload_and_download(query):
     logging.debug(f">> [Query] Received query key {query_key}")
 
     query_payload = query.value.payload
-    logging.debug(f">> [Query] Received query payload {query_payload}")
+    # logging.debug(f">> [Query] Received query payload {query_payload}")
 
     received_at, enclosed_at, content = keelson.uncover(query_payload)
     message_received = NetworkPing.FromString(content)
+
+    # logging.debug(message_received.timestamp_sender)
   
     # Re-Packing with new timestamp and ping count
     payload = NetworkPing()
-    payload.timestamp_sender = message_received.timestamp_sender
+    payload.timestamp_sender.FromNanoseconds(message_received.timestamp_sender.ToNanoseconds())
     payload.timestamp_receiver.FromNanoseconds(ingress_timestamp)
     payload.id_sender = message_received.id_sender
     payload.id_receiver = args.entity_id
@@ -250,11 +252,8 @@ if __name__ == "__main__":
            
         if args.trigger == "ping":
             logging.info("Trigger Ping")
-
             while True:
-
                 for platform in args.ping_common_key:
-                    
                     timestamp_init = time.time_ns()
                     for reply in session.get(platform + "/rpc/network/ping", zenoh.Queue(), value=None):
                         try:
@@ -264,10 +263,63 @@ if __name__ == "__main__":
                             logging.debug(f"Received '{reply.ok.key_expr}': '{reply.ok.payload.decode('utf-8')}'")
                         except:
                             logging.debug(f"Received ERROR: '{reply.err.payload.decode('utf-8')}'")
-                        
                 time.sleep(1)
 
-        else:
+
+        elif args.trigger == "ping_up_down":
+            logging.info("Trigger Ping Up and Down")
+       
+            for platform in args.ping_common_key:
+                
+                mb = args.start_mb
+                count = 0
+
+                while mb <= args.end_mb:
+                    timestamp_init = time.time_ns()
+
+                    size_in_bytes = mb * 1024 * 1024
+                    dummy_payload = bytes(bytearray(int(size_in_bytes)))
+
+                    payload = NetworkPing()
+                    payload.timestamp_sender.FromNanoseconds(timestamp_init)
+                    payload.id_sender = args.entity_id
+                    payload.id_receiver = platform.split("/")[-1]
+                    payload.ping_count = count
+                    payload.payload_description = "Ping test upp and down"
+                    payload.payload_size_mb = mb
+                    payload.payload_size_bytes = size_in_bytes                   
+                    payload.dummy_payload = dummy_payload
+
+                    serialized_payload = payload.SerializeToString()
+                    envelope = keelson.enclose(serialized_payload)
+
+                    for reply in session.get(platform + "/rpc/network/ping_up_down", zenoh.Queue(), value=envelope):
+                        try:
+                            timestamp_received = time.time_ns()
+                            time_diff = (timestamp_received - timestamp_init) / 1000000
+                            logging.debug(f"TIME DIFF ({mb} MB): {time_diff} ms  '{reply.ok.key_expr}' ")
+                        except:
+                            logging.debug(f"Received ERROR: '{reply.err.payload.decode('utf-8')}'")
+
+                    count += 1
+                    mb += args.step_mb 
+                    # END OF LOOP
+
+                       
+
+            
+                    
+
+
+                    
+                time.sleep(1)
+
+
+
+
+
+
+        else: 
             logging.info("No trigger specified, waiting for queries...")
             logging.info("Ctrl-C / Ctrl-Z to exit.")
 
@@ -275,14 +327,14 @@ if __name__ == "__main__":
                 time.sleep(1)
                     
 
+
+
+
+
     except KeyboardInterrupt:
         logging.info("Program ended due to user request (Ctrl-C)")
     except Exception as e:
         logging.error(f"Program ended due to error: {e}")
-
-
-
-
     finally:
         logging.info("Closing Zenoh session...")
         session.close()

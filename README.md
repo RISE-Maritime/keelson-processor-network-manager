@@ -21,11 +21,13 @@ Keelson processor for requesting platform configuration and data link tester
 # Boatswain
 python3 bin/main.py --log-level 10 --realm rise --entity-id boatswain 
 python3 bin/main.py --log-level 10 --realm rise --entity-id boatswain --trigger ping --ping-common-key rise/v0/ted 
+python3 bin/main.py --log-level 10 --realm rise --entity-id boatswain --trigger ping_up_down --ping-common-key rise/v0/ted 
 
 # Ted 
 python3 bin/main.py --log-level 10 --realm rise --entity-id ted --trigger ping --ping-common-key rise/v0/boatswain 
 
 python3 bin/main.py --log-level 10 --realm rise --entity-id ted --trigger ping_up_down --ping-common-key rise/v0/ted 
+python3 bin/main.py --log-level 10 --realm rise --entity-id ted --trigger ping_up_down --ping-common-key rise/v0/boatswain 
 
 
 ```

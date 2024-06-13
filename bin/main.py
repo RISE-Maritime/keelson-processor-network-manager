@@ -81,95 +81,97 @@ def query_ping_upload_and_download(query):
 
 
 
-
-def subscriber_camera_publisher(data):
+def query_ping_upload(query):
     """
-    Subscriber trigger by camera image incoming
+    Query for testing the network connection
+     
+      -  Message payload upload to the responder returning empty message 
+
+    Args:
+        query (zenoh.Query): Zenoh query object
+    Returns:
+        envelope (bytes) with compressed payload
     """
 
     ingress_timestamp = time.time_ns()
     
-    data_key = data.selector
-    logging.debug(f">> [Query] Received query key {data_key}")
+    query_key = query.selector
+    logging.debug(f">> [Query] Received query key {query_key}")
 
-    data_payload = data.value.payload
-    logging.debug(f">> [Query] Received query payload {data_payload}")
+    query_payload = query.value.payload
+    # logging.debug(f">> [Query] Received query payload {query_payload}")
 
-    received_at, enclosed_at, content = keelson.uncover(data_payload)
-    logging.debug(f"content {content} received_at: {received_at}, enclosed_at {enclosed_at}")
-    Image = CompressedImage.FromString(content)
-    img_dic = {
-            "timestamp": Image.timestamp.ToDatetime(),
-            "frame_id": Image.frame_id,
-            "data": Image.data,
-            "format": Image.format
-        }
-    
+    received_at, enclosed_at, content = keelson.uncover(query_payload)
+    message_received = NetworkPing.FromString(content)
 
-    ##########################
-    # TODO: STITCHING HERE
-    ##########################
-
-
-    # Packing panorama created
-    newImage = CompressedImage()
-    newImage.timestamp.FromNanoseconds(ingress_timestamp)
-    newImage.frame_id = "foxglove_frame_id"
-    newImage.data = b"binary_image_data" # Binary image data 
-    newImage.format = "jpeg" # supported formats `webp`, `jpeg`, `png`
-    serialized_payload = newImage.SerializeToString()
+    # logging.debug(message_received.timestamp_sender)
+  
+    # Re-Packing with new timestamp and ping count
+    payload = NetworkPing()
+    payload.timestamp_sender.FromNanoseconds(message_received.timestamp_sender.ToNanoseconds())
+    payload.timestamp_receiver.FromNanoseconds(ingress_timestamp)
+    payload.id_sender = message_received.id_sender
+    payload.id_receiver = args.entity_id
+    payload.ping_count = message_received.ping_count + 1
+    payload.payload_description = message_received.payload_description
+    payload.payload_size_mb = message_received.payload_size_mb
+    payload.payload_size_bytes = message_received.payload_size_bytes
+    serialized_payload = payload.SerializeToString()
     envelope = keelson.enclose(serialized_payload)
-    pub_camera_panorama.put(envelope)
+
+    query.reply(zenoh.Sample(str(query.selector), envelope)) # Send the reply on same key as the query
 
 
-def fixed_hz_publisher():
+def query_ping_download(query):
+    """
+    Query for testing the network connection
+     
+      -  Message payload download to responder incoming message is empty 
+
+    Args:
+        query (zenoh.Query): Zenoh query object
+    Returns:
+        envelope (bytes) with compressed payload
+    """
 
     ingress_timestamp = time.time_ns()
+    
+    query_key = query.selector
+    logging.debug(f">> [Query] Received query key {query_key}")
 
-    # Camera image getter
-    replies = session.get(
-        args.camera_query,
-        zenoh.Queue(),
-        target=QueryTarget.BEST_MATCHING(),
-        consolidation=zenoh.QueryConsolidation.NONE(),
-    )
+    query_payload = query.value.payload
+    # logging.debug(f">> [Query] Received query payload {query_payload}")
 
-
-    for reply in replies.receiver:
-        try:
-            print(
-                ">> Received ('{}': '{}')".format(reply.ok.key_expr, reply.ok.payload)
-            )
-            # Unpacking image    
-            received_at, enclosed_at, content = keelson.uncover(reply.ok.payload)
-            logging.debug(f"content {content} received_at: {received_at}, enclosed_at {enclosed_at}")
-            Image = CompressedImage.FromString(content)
-
-            img_dic = {
-                "timestamp": Image.timestamp.ToDatetime(),
-                "frame_id": Image.frame_id,
-                "data": Image.data,
-                "format": Image.format
-            }
-
-        except:
-            print(">> Received (ERROR: '{}')".format(reply.err.payload))
-
-    ##########################
-    # TODO: STITCHING HERE
-    ##########################
+    received_at, enclosed_at, content = keelson.uncover(query_payload)
+    message_received = NetworkPing.FromString(content)
 
 
-    # Packing panorama created
-    newImage = CompressedImage()
-    newImage.timestamp.FromNanoseconds(ingress_timestamp)
-    newImage.frame_id = "foxglove_frame_id"
-    newImage.data = b"binary_image_data" # Binary image data 
-    newImage.format = "jpeg" # supported formats `webp`, `jpeg`, `png`
-    serialized_payload = newImage.SerializeToString()
-    envelope = keelson.enclose(serialized_payload)
-    pub_camera_panorama.put(envelope)
-    time.sleep(1 / args.fixed_hz)
+    mb = message_received.start_mb
+    count = message_received.ping_count 
+
+
+    while mb <= message_received.end_mb:
+
+        count += 1
+        size_in_bytes = mb * 1024 * 1024
+        dummy_payload = bytes(bytearray(int(size_in_bytes)))
+
+        payload = NetworkPing()
+        payload.timestamp_sender.FromNanoseconds(message_received.timestamp_sender.ToNanoseconds())
+        payload.timestamp_receiver.FromNanoseconds(ingress_timestamp)
+        payload.id_sender = message_received.id_sender
+        payload.id_receiver = args.entity_id
+        payload.ping_count = count
+        payload.payload_description = message_received.payload_description
+        payload.payload_size_mb = mb
+        payload.payload_size_bytes = mb * 1024 * 1024
+        payload.dummy_payload = dummy_payload
+        serialized_payload = payload.SerializeToString()
+        envelope = keelson.enclose(serialized_payload)
+
+        mb += message_received.step_mb
+
+        query.reply(zenoh.Sample(str(query.selector), envelope)) # Send the reply on same key as the query
 
 
 
@@ -200,7 +202,7 @@ if __name__ == "__main__":
     #################################################
     # Setting up QUERYABLE´s
 
-    # Ping test queryable
+    # Ping test queryable (empty payload)
     key_exp_query_ping = keelson.construct_req_rep_key(
         realm=args.realm,
         entity_id=args.entity_id,
@@ -213,7 +215,7 @@ if __name__ == "__main__":
     )
     logging.info(f"Created queryable: {key_exp_query_ping}")
 
-    # Ping test up and down load queryable
+    # Ping test UP and DOWN load queryable
     key_exp_query_ping_up_down = keelson.construct_req_rep_key(
         realm=args.realm,
         entity_id=args.entity_id,
@@ -225,6 +227,33 @@ if __name__ == "__main__":
         query_ping_upload_and_download
     )
     logging.info(f"Created queryable: {key_exp_query_ping_up_down}")
+
+    # Ping test UP load queryable
+    key_exp_query_ping_up = keelson.construct_req_rep_key(
+        realm=args.realm,
+        entity_id=args.entity_id,
+        responder_id="network",
+        procedure="ping_up",
+    )
+    query_network_ping_up = session.declare_queryable(
+        key_exp_query_ping_up,
+        query_ping_upload
+    )
+    logging.info(f"Created queryable: {key_exp_query_ping_up}")
+
+    # Ping test DOWN load queryable
+    key_exp_query_ping_down = keelson.construct_req_rep_key(
+        realm=args.realm,
+        entity_id=args.entity_id,
+        responder_id="network",
+        procedure="ping_down",
+    )
+    query_network_ping_down = session.declare_queryable(
+        key_exp_query_ping_down,
+        query_ping_download
+    )
+    logging.info(f"Created queryable: {key_exp_query_ping_down}")
+
 
 
     #################################################
@@ -298,21 +327,88 @@ if __name__ == "__main__":
                             timestamp_received = time.time_ns()
                             time_diff = (timestamp_received - timestamp_init) / 1000000
                             logging.debug(f"TIME DIFF ({mb} MB): {time_diff} ms  '{reply.ok.key_expr}' ")
+                            time.sleep(1)
                         except:
                             logging.debug(f"Received ERROR: '{reply.err.payload.decode('utf-8')}'")
 
                     count += 1
                     mb += args.step_mb 
+                    time.sleep(1)   
                     # END OF LOOP
 
-                       
 
-            
+        elif args.trigger == "ping_up":
+            logging.info("Trigger Ping UP")
+       
+            for platform in args.ping_common_key:
+                
+                mb = args.start_mb
+                count = 0
+
+                while mb <= args.end_mb:
+                    timestamp_init = time.time_ns()
+
+                    size_in_bytes = mb * 1024 * 1024
+                    dummy_payload = bytes(bytearray(int(size_in_bytes)))
+
+                    payload = NetworkPing()
+                    payload.timestamp_sender.FromNanoseconds(timestamp_init)
+                    payload.id_sender = args.entity_id
+                    payload.id_receiver = platform.split("/")[-1]
+                    payload.ping_count = count
+                    payload.payload_description = "Ping test upp"
+                    payload.payload_size_mb = mb
+                    payload.payload_size_bytes = size_in_bytes                   
+                    payload.dummy_payload = dummy_payload
+
+                    serialized_payload = payload.SerializeToString()
+                    envelope = keelson.enclose(serialized_payload)
+
+                    for reply in session.get(platform + "/rpc/network/ping_up_down", zenoh.Queue(), value=envelope):
+                        try:
+                            timestamp_received = time.time_ns()
+                            time_diff = (timestamp_received - timestamp_init) / 1000000
+                            logging.debug(f"TIME DIFF ({mb} MB UP): {time_diff} ms  '{reply.ok.key_expr}' ")
+                            time.sleep(1)
+                        except:
+                            logging.debug(f"Received ERROR: '{reply.err.payload.decode('utf-8')}'")
+
+                    count += 1
+                    mb += args.step_mb 
+                    time.sleep(1)
+                    # END OF LOOP
+        
+        elif args.trigger == "ping_down":
+            logging.info("Trigger Ping DOWN")
+       
+            for platform in args.ping_common_key:
+                
+                timestamp_init = time.time_ns()
+
+                payload = NetworkPing()
+                payload.timestamp_sender.FromNanoseconds(timestamp_init)
+                payload.id_sender = args.entity_id
+                payload.id_receiver = platform.split("/")[-1]
+                payload.payload_description = "Ping test down"
+                payload.start_mb = args.start_mb
+                payload.end_mb = args.end_mb
+                payload.step_mb = args.step_mb
+                
+                serialized_payload = payload.SerializeToString()
+                envelope = keelson.enclose(serialized_payload)
+
+                for reply in session.get(platform + "/rpc/network/ping_up_down", zenoh.Queue(), value=envelope):
+                    try:
+                        timestamp_received = time.time_ns()
+                        time_diff = (timestamp_received - timestamp_init) / 1000000
+                        reply_payload = NetworkPing.FromString(reply.ok.payload)
+                        mb = reply_payload.payload_size_mb
+                        logging.debug(f"TIME DIFF ({mb} MB UP): {time_diff} ms  '{reply.ok.key_expr}' ")
+                        time.sleep(1)
+                    except:
+                        logging.debug(f"Received ERROR: '{reply.err.payload.decode('utf-8')}'")
+
                     
-
-
-                    
-                time.sleep(1)
 
 
 

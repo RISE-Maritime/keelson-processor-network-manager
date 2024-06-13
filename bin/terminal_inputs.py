@@ -54,7 +54,7 @@ def terminal_inputs():
     parser.add_argument(
         "--trigger",
         type=str,
-        choices=["ping", "ping_up_down"],
+        choices=["ping", "ping_up_down", "ping_up", "ping_down"],
         help="Lave empty to only activate the queryable, or specify the test to trigger",
     )
 

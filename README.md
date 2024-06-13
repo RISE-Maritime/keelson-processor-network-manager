@@ -5,20 +5,25 @@ Keelson processor for requesting platform configuration and data link tester
 ## Functions (TODO:)
 
 - [ ] Query: Ping, Time stamps and directly return incoming message
-- [ ] 
-- [ ] SubPub: Ping, Time stamps and directly return incoming message
-- [ ] Query: Providing platform description and configuration
-- [ ] 
-- [ ] Run: Ping test on selected amount and interval, pub alarm
-- [ ] Query: Trigger Ping test
+- [ ] Run: Classing Ping test on selected amount and interval, (lowest possible latency)
 - [ ] Run: Message size test on selected from X MB up to X MB on set interval, pub result
+
+- [ ] SubPub: Ping, Time stamps and directly return incoming message
+- [ ] Pub: Alarm
+- [ ] Query: Trigger Ping test
 - [ ] Query: Message size test
+- [ ] Query: Providing platform description and configuration
+
 
 ## Quick start
 
 ```bash
-python3 bin/main.py --log-level 10 --realm rise --entity-id boatswain
+python3 bin/main.py --log-level 10 --realm rise --entity-id masslab
 ```
+
+## System configuration
+
+Computer should have timeserver NTP configured to **ntp.se**
 
 ## Get going with development
 

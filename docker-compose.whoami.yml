@@ -8,4 +8,4 @@ services:
     restart: unless-stopped
     network_mode: "host"
     privileged: true
-    command: "--realm rise --entity-id boatswain --log-level 10 "
+    command: "--realm rise --entity-id masslab --log-level 10 "

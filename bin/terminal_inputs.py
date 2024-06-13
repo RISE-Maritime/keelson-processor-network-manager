@@ -20,6 +20,15 @@ def terminal_inputs():
         help="Log level 10=DEBUG, 20=INFO, 30=WARN, 40=ERROR, 50=CRITICAL 0=NOTSET",
     )
     parser.add_argument(
+        "--mode",
+        "-m",
+        dest="mode",
+        default="peer",
+        choices=["peer", "client"],
+        type=str,
+        help="The zenoh session mode.",
+    )
+    parser.add_argument(
         "--connect",
         action="append",
         type=str,
@@ -42,6 +51,19 @@ def terminal_inputs():
 
     # Add arguments for the specific processor
 
+    parser.add_argument(
+        "--trigger",
+        type=str,
+        choices=["ping", "ping_up_down"],
+        help="Lave empty to only activate the queryable, or specify the test to trigger",
+    )
+
+    parser.add_argument(
+        "--ping-common-key",
+        type=str,
+        action="append",
+        help="Specify the common key expression to each platform {realm}/v{major_version}/{entity_id}",
+    )
 
     ## Parse arguments and start doing our thing
     args = parser.parse_args()

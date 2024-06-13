@@ -11,12 +11,38 @@ from keelson.payloads.NetworkPing_pb2 import NetworkPing
 
 session = None
 args = None
-pub_camera_panorama = None
 
 
 def query_ping(query):
     """
     Query for testing the network connection
+
+    - Loop time of the message should be measured 
+
+    Args:
+        query (zenoh.Query): Zenoh query object
+    Returns:
+        envelope (bytes) with compressed payload
+    """
+    
+    query_key = query.selector
+    logging.debug(f">> [Query] Received query key {query_key}")
+
+    query_payload = query.value.payload
+    logging.debug(f">> [Query] Received query payload {query_payload}")
+
+
+    query.reply(zenoh.Sample(str(query.selector), query_payload)) # Send the reply on same key as the query
+
+
+
+
+
+def query_ping_upload_and_download(query):
+    """
+    Query for testing the network connection
+     
+      -  Loping the message payload back to sender with timestamp 
 
     Args:
         query (zenoh.Query): Zenoh query object
@@ -32,24 +58,24 @@ def query_ping(query):
     query_payload = query.value.payload
     logging.debug(f">> [Query] Received query payload {query_payload}")
 
+    received_at, enclosed_at, content = keelson.uncover(query_payload)
+    message_received = NetworkPing.FromString(content)
   
-    # Packing panorama created
+    # Re-Packing with new timestamp and ping count
     payload = NetworkPing()
-    payload.timestamp_sender.FromNanoseconds(ingress_timestamp)
+    payload.timestamp_sender = message_received.timestamp_sender
     payload.timestamp_receiver.FromNanoseconds(ingress_timestamp)
-    payload.timestamp_receiver_arrived.FromNanoseconds(ingress_timestamp)
-    payload.id_sender = "id_sender"
-    payload.id_receiver = "id_receiver"
-    payload.ping_count = 0
-    payload.payload_description = "ping_test"
-    payload.payload_size_mb = "0.1MB"
-    payload.payload_size_bytes = "150 bytes"
-    payload.dummy_payload = b"binary_data" 
+    payload.id_sender = message_received.id_sender
+    payload.id_receiver = args.entity_id
+    payload.ping_count = message_received.ping_count + 1
+    payload.payload_description = message_received.payload_description
+    payload.payload_size_mb = message_received.payload_size_mb
+    payload.payload_size_bytes = message_received.payload_size_bytes
+    payload.dummy_payload = message_received.dummy_payload 
     serialized_payload = payload.SerializeToString()
     envelope = keelson.enclose(serialized_payload)
 
-    # Replaying on the query with the panorama image in an keelson envelope
-    query.reply(zenoh.Sample(str(query.selector), envelope))
+    query.reply(zenoh.Sample(str(query.selector), envelope)) # Send the reply on same key as the query
 
 
 
@@ -183,55 +209,60 @@ if __name__ == "__main__":
         key_exp_query_ping,
         query_ping
     )
-    
     logging.info(f"Created queryable: {key_exp_query_ping}")
+
+    # Ping test up and down load queryable
+    key_exp_query_ping_up_down = keelson.construct_req_rep_key(
+        realm=args.realm,
+        entity_id=args.entity_id,
+        responder_id="network",
+        procedure="ping_up_down",
+    )
+    query_network_ping_up_down = session.declare_queryable(
+        key_exp_query_ping_up_down,
+        query_ping_upload_and_download
+    )
+    logging.info(f"Created queryable: {key_exp_query_ping_up_down}")
 
 
     #################################################
     # Setting up PUBLISHER´s 
 
-    # Camera panorama
-    # key_exp_pub_camera_pano = keelson.construct_pub_sub_key(
-    #     realm=args.realm,
-    #     entity_id=args.entity_id,
-    #     subject="compressed_image",  # Needs to be a supported subject
-    #     source_id="panorama/" + args.output_id,
-    # )
-    # pub_camera_panorama = session.declare_publisher(
-    #     key_exp_pub_camera_pano,
-    #     priority=zenoh.Priority.INTERACTIVE_HIGH(),
-    #     congestion_control=zenoh.CongestionControl.DROP(),
-    # )
-    # logging.info(f"Created publisher: {key_exp_pub_camera_pano}")
-
+    # Network ping result publisher
+    key_exp_pub_results = keelson.construct_pub_sub_key(
+        realm=args.realm,
+        entity_id=args.entity_id,
+        subject="network_ping",  # Needs to be a supported subject
+        source_id="results" ,
+    )
+    pub_camera_panorama = session.declare_publisher(
+        key_exp_pub_results,
+        priority=zenoh.Priority.INTERACTIVE_HIGH(),
+        congestion_control=zenoh.CongestionControl.DROP(),
+    )
+    logging.info(f"Created publisher: {key_exp_pub_results}")
 
 
     #################################################
 
     try:
-        while True:
-            time.sleep(1)
+   
+           
+        if args.trigger == "ping":
+            logging.info("Trigger Ping")
 
-        #     # TODO: SUBSCRIPTION initialization for panorama image creation
-        #     if args.trigger_sub is not None:
-        #         logging.info(f"Trigger Subscribing Key: {args.trigger_sub}")
-        #         key_exp_sub_camera = keelson.construct_pub_sub_key(
-        #             realm=args.realm,
-        #             entity_id=args.entity_id,
-        #             subject="compressed_image",  # Needs to be a supported subject
-        #             source_id=args.trigger_sub,
-        #         )
-        #         # Declaring zenoh publisher
-        #         sub_camera = session.declare_subscriber(
-        #             key_exp_sub_camera, subscriber_camera_publisher
-        #         )
-        #     # TODO: FIXED HZ initialization for panorama image creation
-        #     if args.trigger_hz is not None:
-        #         logging.info(f"Trigger Hz: {args.trigger_hz}")
-        #         while True:
-        #             fixed_hz_publisher()
+            while True:
 
-
+                for platform in args.ping_key:
+        
+                    for reply in session.get(args.ping_common_key + "/ping", zenoh.Queue(), value=None):
+                        try:
+                            logging.debug(f"Received '{reply.ok.key_expr}': '{reply.ok.payload.decode('utf-8')}'")
+                        except:
+                            logging.debug(f"Received ERROR: '{reply.err.payload.decode('utf-8')}'")
+                        
+                time.sleep(1)
+                    
 
     except KeyboardInterrupt:
         logging.info("Program ended due to user request (Ctrl-C)")

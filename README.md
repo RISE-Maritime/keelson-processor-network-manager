@@ -18,7 +18,11 @@ Keelson processor for requesting platform configuration and data link tester
 ## Quick start
 
 ```bash
-python3 bin/main.py --log-level 10 --realm rise --entity-id masslab --trigger ping --ping-common-key rise/v0/masslab 
+# Boatswain
+python3 bin/main.py --log-level 10 --realm rise --entity-id boatswain 
+python3 bin/main.py --log-level 10 --realm rise --entity-id boatswain --trigger ping --ping-common-key rise/v0/ted 
+
+python3 bin/main.py --log-level 10 --realm rise --entity-id ted --trigger ping --ping-common-key rise/v0/boatswain 
 ```
 
 ## System configuration

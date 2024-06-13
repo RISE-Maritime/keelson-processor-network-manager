@@ -266,6 +266,12 @@ if __name__ == "__main__":
                             logging.debug(f"Received ERROR: '{reply.err.payload.decode('utf-8')}'")
                         
                 time.sleep(1)
+
+        else:
+            logging.info("No trigger specified, waiting for queries...")
+
+            while True:
+                time.sleep(1)
                     
 
     except KeyboardInterrupt:

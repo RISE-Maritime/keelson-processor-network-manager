@@ -8,4 +8,4 @@ services:
     restart: unless-stopped
     network_mode: "host"
     privileged: true
-    command: "--realm rise --entity-id masslab --log-level 10 "
+    command: "--log-level 10 --realm rise --entity-id ted --trigger ping --ping-common-key rise/v0/boatswain"

@@ -269,6 +269,7 @@ if __name__ == "__main__":
 
         else:
             logging.info("No trigger specified, waiting for queries...")
+            logging.info("Ctrl-C / Ctrl-Z to exit.")
 
             while True:
                 time.sleep(1)

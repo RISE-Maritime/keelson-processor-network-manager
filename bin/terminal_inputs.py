@@ -5,9 +5,9 @@ def terminal_inputs():
     """Parse the terminal inputs and return the arguments"""
 
     parser = argparse.ArgumentParser(
-        prog="whoami",
+        prog="network-manager",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        description="Who Am I, is a tool for checking network health check and stresses test",
+        description="Who Am I, is a tool for checking network health check and stresses test. More coming soon!",
     )
 
     # Standard arguments

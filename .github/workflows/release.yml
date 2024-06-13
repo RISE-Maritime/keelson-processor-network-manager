@@ -29,8 +29,8 @@ jobs:
           file: Dockerfile
           push: true
           tags: |
-            ghcr.io/mo-rise/keelson-processor-whoami:latest
-            ghcr.io/mo-rise/keelson-processor-whoami:${{ github.event.release.tag_name }}
+            ghcr.io/mo-rise/keelson-processor-network-manager:latest
+            ghcr.io/mo-rise/keelson-processor-network-manager:${{ github.event.release.tag_name }}
       -
         name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}

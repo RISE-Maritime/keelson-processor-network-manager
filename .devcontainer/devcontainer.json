@@ -9,7 +9,7 @@
 	},
 	"runArgs": [
 		"--network=host",
-    "--name=devcontainer-keelson-whoami"
+    "--name=devcontainer-keelson-network-manager"
 	],
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

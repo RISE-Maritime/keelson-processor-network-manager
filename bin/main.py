@@ -26,10 +26,10 @@ def query_ping(query):
     """
     
     query_key = query.selector
-    logging.debug(f">> [Query] Received query key {query_key}")
+    logging.debug(f">> [Query Ping] Received key: {query_key}")
 
-    query_payload = query.value.payload
-    logging.debug(f">> [Query] Received query payload {query_payload}")
+    query_payload = query.value
+    logging.debug(f">> [Query Ping] Received payload: {query_payload}")
 
 
     query.reply(zenoh.Sample(str(query.selector), query_payload)) # Send the reply on same key as the query
@@ -253,10 +253,14 @@ if __name__ == "__main__":
 
             while True:
 
-                for platform in args.ping_key:
-        
-                    for reply in session.get(args.ping_common_key + "/ping", zenoh.Queue(), value=None):
+                for platform in args.ping_common_key:
+                    
+                    timestamp_init = time.time_ns()
+                    for reply in session.get(platform + "/rpc/network/ping", zenoh.Queue(), value=None):
                         try:
+                            timestamp_received = time.time_ns()
+                            time_diff = (timestamp_received - timestamp_init) / 1000000
+                            logging.debug(f"TIME DIFF: {time_diff} ms")
                             logging.debug(f"Received '{reply.ok.key_expr}': '{reply.ok.payload.decode('utf-8')}'")
                         except:
                             logging.debug(f"Received ERROR: '{reply.err.payload.decode('utf-8')}'")

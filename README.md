@@ -1,3 +1,4 @@
+
 # Keelson Processor Network-Manager
 
 Keelson processor for requesting platform configuration and data link tester
@@ -25,6 +26,18 @@ options:
   --step-mb STEP_MB     Increment the stress test by this amount of MB (default: 1.0)
 ```
 
+**Example**
+2024-06-17 14:14:34,742 INFO root Opening Zenoh session...
+2024-06-17 14:14:35,249 INFO root Zenoh session established: <zenoh.session.Info object at 0x7f7ee2497050>
+2024-06-17 14:14:35,251 INFO root Created queryable: rise/v0/masslab/rpc/network/ping
+2024-06-17 14:14:35,252 INFO root Created queryable: rise/v0/masslab/rpc/network/ping_up_down
+2024-06-17 14:14:35,253 INFO root Created queryable: rise/v0/masslab/rpc/network/ping_up
+2024-06-17 14:14:35,254 INFO root Created queryable: rise/v0/masslab/rpc/network/ping_down
+2024-06-17 14:14:35,255 INFO root Created publisher: rise/v0/masslab/pubsub/network_ping/results
+2024-06-17 14:14:35,255 INFO root No trigger specified, waiting for queries...
+2024-06-17 14:14:35,255 INFO root Ctrl-C / Ctrl-Z to exit.
+
+
 ## Functions (TODO:)
 
 ### Latency checks
@@ -51,7 +64,7 @@ options:
 
 ```bash
 # Boatswain
-python3 bin/main.py --log-level 10 --realm rise --entity-id boatswain 
+python3 bin/main.py --log-level 10 --realm rise --entity-id masslab --mode client --connect tcp/localhost:7448
 python3 bin/main.py --log-level 10 --realm rise --entity-id boatswain --trigger ping --ping-common-key rise/v0/ted 
 python3 bin/main.py --log-level 10 --realm rise --entity-id boatswain --trigger ping_up_down --ping-common-key rise/v0/ted 
 

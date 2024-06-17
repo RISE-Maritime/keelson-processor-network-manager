@@ -23,7 +23,6 @@ def terminal_inputs():
         "--mode",
         "-m",
         dest="mode",
-        default="peer",
         choices=["peer", "client"],
         type=str,
         help="The zenoh session mode.",

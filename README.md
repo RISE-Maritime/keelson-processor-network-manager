@@ -69,11 +69,13 @@ python3 bin/main.py --log-level 10 --realm rise --entity-id boatswain --trigger 
 python3 bin/main.py --log-level 10 --realm rise --entity-id boatswain --trigger ping_up_down --ping-common-key rise/v0/ted 
 
 # Ted 
-python3 bin/main.py --log-level 10 --realm rise --entity-id ted --trigger ping --ping-common-key rise/v0/boatswain 
+python3 bin/main.py --log-level 10 --realm rise --entity-id masslab --trigger ping --ping-common-key rise/v0/boatswain 
 
-python3 bin/main.py --log-level 10 --realm rise --entity-id ted --trigger ping_up_down --ping-common-key rise/v0/ted 
-python3 bin/main.py --log-level 10 --realm rise --entity-id ted --trigger ping_up_down --ping-common-key rise/v0/boatswain 
+python3 bin/main.py --log-level 10 --realm rise --entity-id masslab --trigger ping_up_down --ping-common-key rise/v0/ted 
+python3 bin/main.py --log-level 10 --realm rise --entity-id masslab --trigger ping_up_down --ping-common-key rise/v0/boatswain 
 
+# Novia
+python3 bin/main.py --log-level 10 --realm rise --entity-id masslab --trigger ping_up_down --ping-common-key novia/v0/lab 
 
 ```
 
@@ -114,3 +116,28 @@ Setup for development environment on your own computer:
 
 [Zenoh CLI for debugging and problem solving](https://github.com/RISE-Maritime/zenoh-cli)
 
+
+
+# Example test output "UP and DOWN load traffic" 
+
+2024-06-20 08:32:30,100 INFO root Opening Zenoh session...
+2024-06-20 08:32:30,607 INFO root Zenoh session established: <zenoh.session.Info object at 0x7ec3f970b050>
+2024-06-20 08:32:30,608 INFO root Created queryable: rise/v0/masslab/rpc/network/ping
+2024-06-20 08:32:30,609 INFO root Created queryable: rise/v0/masslab/rpc/network/ping_up_down
+2024-06-20 08:32:30,609 INFO root Created queryable: rise/v0/masslab/rpc/network/ping_up
+2024-06-20 08:32:30,610 INFO root Created queryable: rise/v0/masslab/rpc/network/ping_down
+2024-06-20 08:32:30,610 INFO root Created publisher: rise/v0/masslab/pubsub/network_ping/results
+2024-06-20 08:32:30,611 INFO root Trigger Ping Up and Down
+2024-06-20 08:32:30,635 INFO root TIME DIFF (0.0 MB): 24.187125 ms  'novia/v0/lab/rpc/network/ping_up_down' 
+2024-06-20 08:32:33,958 INFO root TIME DIFF (1.0 MB): 1321.751909 ms  'novia/v0/lab/rpc/network/ping_up_down' 
+2024-06-20 08:32:37,160 INFO root TIME DIFF (2.0 MB): 1201.61333 ms  'novia/v0/lab/rpc/network/ping_up_down' 
+2024-06-20 08:32:40,580 INFO root TIME DIFF (3.0 MB): 1418.313665 ms  'novia/v0/lab/rpc/network/ping_up_down' 
+2024-06-20 08:32:44,683 INFO root TIME DIFF (4.0 MB): 2100.404637 ms  'novia/v0/lab/rpc/network/ping_up_down' 
+2024-06-20 08:32:51,531 INFO root TIME DIFF (5.0 MB): 4846.415576 ms  'novia/v0/lab/rpc/network/ping_up_down' 
+2024-06-20 08:32:56,328 INFO root TIME DIFF (6.0 MB): 2795.603114 ms  'novia/v0/lab/rpc/network/ping_up_down' 
+2024-06-20 08:33:01,620 INFO root TIME DIFF (7.0 MB): 3291.334863 ms  'novia/v0/lab/rpc/network/ping_up_down' 
+2024-06-20 08:33:07,463 INFO root TIME DIFF (8.0 MB): 3839.571258 ms  'novia/v0/lab/rpc/network/ping_up_down' 
+2024-06-20 08:33:13,683 INFO root TIME DIFF (9.0 MB): 4217.267554 ms  'novia/v0/lab/rpc/network/ping_up_down' 
+2024-06-20 08:33:22,301 INFO root TIME DIFF (10.0 MB): 6614.029107 ms  'novia/v0/lab/rpc/network/ping_up_down' 
+2024-06-20 08:33:24,301 INFO root Closing Zenoh session...
+2024-06-20 08:33:24,302 INFO root Zenoh session closed.

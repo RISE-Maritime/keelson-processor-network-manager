@@ -45,15 +45,11 @@ options:
 - [X] Query: Latency Ping, Upload, Down & Upload
 - [X] Run functions; Latency Ping, Upload, Down & Upload
 
-### Speed test
-
-- [ ] Find max transfer rate in Megabits/second upload and download
-
 ### Background/Automated Health Checks
 
-- [ ] Platform of interest getting disconnected from network (Publish ALARM)
-  - Should only use a very small amount of network recourses
-- [ ] Dependent on available network recourses publish a message telling the messages to be priority and limits
+- [X] If platform getting disconnected from the network data consumers will need to check data validity by pre defined time limit. In such publish ALARM to the user
+
+- [ ] Query for checking time synchronization
 
 ### Platform (Maybe?)
 
@@ -63,6 +59,9 @@ options:
 ## Quick start
 
 ```bash
+# Self test
+python3 bin/main.py --log-level 10 --realm rise --entity-id test --trigger ping --ping-common-key rise/v0/test 
+
 # Boatswain
 python3 bin/main.py --log-level 10 --realm rise --entity-id masslab --mode client --connect tcp/localhost:7448
 python3 bin/main.py --log-level 10 --realm rise --entity-id boatswain --trigger ping --ping-common-key rise/v0/ted 

@@ -5,8 +5,9 @@ import atexit
 import json
 import time
 import keelson
+import datetime
 from terminal_inputs import terminal_inputs
-from keelson.payloads.NetworkPing_pb2 import NetworkPing, NetworkResults
+from keelson.payloads.NetworkPing_pb2 import NetworkPing, NetworkResult
 
 session = None
 args = None
@@ -23,6 +24,8 @@ def query_ping(query):
     Returns:
         envelope (bytes) with compressed payload
     """
+    
+    ingress_timestamp = time.time_ns()
 
     query_key = query.selector
     logging.debug(f">> [Query Ping] Received key: {query_key}")
@@ -30,8 +33,15 @@ def query_ping(query):
     query_payload = query.value
     logging.debug(f">> [Query Ping] Received payload: {query_payload}")
 
+    payload = NetworkPing()
+    payload.timestamp_receiver.FromNanoseconds(ingress_timestamp)
+    payload.id_receiver = args.entity_id
+    payload.payload_description = "Ping & Time test"    
+    serialized_payload = payload.SerializeToString()
+    envelope = keelson.enclose(serialized_payload)
+
     query.reply(
-        zenoh.Sample(str(query.selector), query_payload)
+        zenoh.Sample(str(query.selector), envelope)
     )  # Send the reply on same key as the query
 
 
@@ -253,7 +263,7 @@ if __name__ == "__main__":
     key_exp_pub_results = keelson.construct_pub_sub_key(
         realm=args.realm,
         entity_id=args.entity_id,
-        subject="network_ping",  # Needs to be a supported subject
+        subject="network_result",  # Needs to be a supported subject
         source_id="results",
     )
     pub_results = session.declare_publisher(
@@ -268,10 +278,12 @@ if __name__ == "__main__":
     try:
 
         if args.trigger == "ping":
-            logging.info("Trigger Ping")
+            logging.info("Trigger Ping & Time Diff")
             while True:
                 for platform in args.ping_common_key:
                     timestamp_init = time.time_ns()
+
+                    platform_name = platform.split("/")[-1]
 
                     for reply in session.get(
                         platform + "/rpc/network/ping", zenoh.Queue(), value=None
@@ -279,21 +291,47 @@ if __name__ == "__main__":
                         try:
                             timestamp_received = time.time_ns()
                             time_diff = (timestamp_received - timestamp_init) / 1000000
-                            logging.info(
-                                f"TIME DIFF (0 MB): {time_diff} ms  '{reply.ok.key_expr}' "
-                            )
+                           
+                            reseived_at, enclosed_at, content = keelson.uncover(reply.ok.payload)
+                            reseived_payload = NetworkPing.FromString(content)
+                            res_timstamp = reseived_payload.timestamp_receiver.ToNanoseconds()
+                           
 
-                            result_payload = NetworkResults()
-                            result_payload.timestamp.FromNanoseconds(timestamp_received)
+                            logging.info(
+                                f"PING (0 MB): {time_diff} ms from '{platform_name}' "
+                            )
+                            timestamp_init_iso = datetime.datetime.fromtimestamp(timestamp_init / 1e9).isoformat()
+                            timestamp_res_iso = datetime.datetime.fromtimestamp(res_timstamp / 1e9).isoformat()
+
+                            clock_diff = (res_timstamp - timestamp_init) / 1000000
+                            clock_diff_adjusted_ping = (time_diff/2) - clock_diff
+
+                            logging.info(
+                                f"UTC Sender clock: {timestamp_init_iso}  Target clock: {timestamp_res_iso} pingtime adjusted diff: {round( clock_diff_adjusted_ping, 6 )} ms"
+                            )
+              
+                            # logging.debug(f"Received ENVELOPE: '{reseived_payload}' received_at: {received_at}, enclosed_at: {enclosed_at} ")
+
+                            result_payload = NetworkResult()
+                            result_payload.timestamp.FromNanoseconds(timestamp_received)                          
                             result_payload.id_sender = args.entity_id
-                            result_payload.id_receiver = platform.split("/")[-1]
-                            result_payload.ping_count = 0
+                            result_payload.id_target = platform.split("/")[-1]
                             result_payload.payload_description = "Ping"
+                            
                             result_payload.latency_ms = time_diff
                             result_payload.payload_size_mb = 0
+
+                            result_payload.timestamp_sender_init.FromNanoseconds(timestamp_init)  
+                            result_payload.timestamp_sender_response.FromNanoseconds(timestamp_received)  
+                            result_payload.timestamp_trget.FromNanoseconds(res_timstamp)  
+
+                            result_payload.clock_offset = clock_diff
+                            result_payload.clock_offset_ping_adjusted = clock_diff_adjusted_ping
+
                             serialized_payload = result_payload.SerializeToString()
                             envelope = keelson.enclose(serialized_payload)
                             pub_results.put(envelope)
+                            # logging.debug(f"Sent result: '{result_payload}'")
 
                         except Exception as e:
                             logging.debug(f"ERROR: '{e}'")
@@ -341,11 +379,10 @@ if __name__ == "__main__":
                                 f"TIME DIFF ({mb} MB): {time_diff} ms  '{reply.ok.key_expr}' "
                             )
 
-                            result_payload = NetworkResults()
+                            result_payload = NetworkResult()
                             result_payload.timestamp.FromNanoseconds(timestamp_received)
                             result_payload.id_sender = args.entity_id
-                            result_payload.id_receiver = platform.split("/")[-1]
-                            result_payload.ping_count = count
+                            result_payload.id_target = platform.split("/")[-1]
                             result_payload.payload_description = "Ping"
                             result_payload.latency_ms = time_diff
                             result_payload.payload_size_mb = mb
@@ -403,11 +440,10 @@ if __name__ == "__main__":
                             logging.debug(
                                 f"TIME DIFF ({mb} MB UP): {time_diff} ms  '{reply.ok.key_expr}' "
                             )
-                            result_payload = NetworkResults()
+                            result_payload = NetworkResult()
                             result_payload.timestamp.FromNanoseconds(timestamp_received)
                             result_payload.id_sender = args.entity_id
-                            result_payload.id_receiver = platform.split("/")[-1]
-                            result_payload.ping_count = count
+                            result_payload.id_target = platform.split("/")[-1]
                             result_payload.payload_description = "Ping"
                             result_payload.latency_ms = time_diff
                             result_payload.payload_size_mb = mb
@@ -467,11 +503,10 @@ if __name__ == "__main__":
                             logging.debug(
                                 f"TIME DIFF ({mb} MB DOWN): {time_diff} ms  '{reply.ok.key_expr}' "
                             )
-                            result_payload = NetworkResults()
+                            result_payload = NetworkResult()
                             result_payload.timestamp.FromNanoseconds(timestamp_received)
                             result_payload.id_sender = args.entity_id
-                            result_payload.id_receiver = platform.split("/")[-1]
-                            result_payload.ping_count = count
+                            result_payload.id_target = platform.split("/")[-1]
                             result_payload.payload_description = "Ping"
                             result_payload.latency_ms = time_diff
                             result_payload.payload_size_mb = mb

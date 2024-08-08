@@ -38,7 +38,7 @@ options:
 2024-06-17 14:14:35,255 INFO root Ctrl-C / Ctrl-Z to exit.
 
 
-## Functions (TODO:)
+## Functions
 
 ### Latency checks
 
@@ -48,12 +48,8 @@ options:
 ### Background/Automated Health Checks
 
 - [X] If platform getting disconnected from the network data consumers will need to check data validity by pre defined time limit. In such publish ALARM to the user
+- [X] Query for checking time synchronization
 
-- [ ] Query for checking time synchronization
-
-### Platform (Maybe?)
-
-- [ ] Query: Platform description and static configuration
 
 
 ## Quick start
